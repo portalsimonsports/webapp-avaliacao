@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0f3d66">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./styles.css">
+  <title>WebApp Avaliação</title>
+</head>
+<body>
+  <main class="app-shell">
+    <section class="card">
+      <div class="brand">
+        <div class="logo">WA</div>
+        <div>
+          <h1>WebApp Avaliação</h1>
+          <p>Acesso institucional</p>
+        </div>
+      </div>
+
+      <form id="loginForm" autocomplete="off">
+        <label for="codigo">Código</label>
+        <input id="codigo" name="codigo" inputmode="numeric" required>
+
+        <label for="senha">Senha</label>
+        <input id="senha" name="senha" type="password" required>
+
+        <button id="btnEntrar" type="submit">Entrar</button>
+        <p id="status" class="status" role="status"></p>
+      </form>
+
+      <section id="painel" class="hidden">
+        <div class="user-line">
+          <strong id="usuarioNome">Usuário</strong>
+          <button id="btnSair" class="secondary" type="button">Sair</button>
+        </div>
+
+        <div id="modulos" class="grid"></div>
+      </section>
+    </section>
+  </main>
+
+  <script src="./config.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
