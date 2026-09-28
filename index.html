@@ -9,37 +9,15 @@
   <title>WebApp Avaliação</title>
 </head>
 <body>
-  <main class="app-shell">
-    <section class="card">
-      <div class="brand">
-        <div class="logo">WA</div>
-        <div>
-          <h1>WebApp Avaliação</h1>
-          <p>Acesso institucional</p>
-        </div>
-      </div>
+  <div id="loading" class="loading">
+    <div class="loader-card">
+      <div class="logo">WA</div>
+      <strong>WebApp Avaliação</strong>
+      <span>Carregando sistema...</span>
+    </div>
+  </div>
 
-      <form id="loginForm" autocomplete="off">
-        <label for="codigo">Código</label>
-        <input id="codigo" name="codigo" inputmode="numeric" required>
-
-        <label for="senha">Senha</label>
-        <input id="senha" name="senha" type="password" required>
-
-        <button id="btnEntrar" type="submit">Entrar</button>
-        <p id="status" class="status" role="status"></p>
-      </form>
-
-      <section id="painel" class="hidden">
-        <div class="user-line">
-          <strong id="usuarioNome">Usuário</strong>
-          <button id="btnSair" class="secondary" type="button">Sair</button>
-        </div>
-
-        <div id="modulos" class="grid"></div>
-      </section>
-    </section>
-  </main>
+  <iframe id="webappFrame" title="WebApp Avaliação" allow="camera; microphone; clipboard-read; clipboard-write"></iframe>
 
   <script src="./config.js"></script>
   <script src="./app.js"></script>
