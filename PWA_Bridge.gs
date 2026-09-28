@@ -263,6 +263,8 @@ function PSS_PWA_frontend_() {
       .evaluate()
       .getContent();
 
+    html = PSS_PWA_corrigirContadoresFrontend_(html);
+
     return {
       ok: true,
       html: html
@@ -274,6 +276,39 @@ function PSS_PWA_frontend_() {
         String(err && err.message ? err.message : err)
     };
   }
+}
+
+/**
+ * Correção específica do Dashboard:
+ * - Avaliações Realizadas recebe provasGeradas;
+ * - Provas Geradas recebe avaliacoes/avaliacoesRealizadas.
+ *
+ * Esta correção atua apenas no HTML entregue à PWA e não altera
+ * as planilhas nem os dados gravados.
+ */
+function PSS_PWA_corrigirContadoresFrontend_(html) {
+  html = String(html || '');
+
+  var originalNovo1 = "document.getElementById('stat-provas').innerText = (stats && typeof stats.avaliacoes !== 'undefined') ? stats.avaliacoes : ((stats && typeof stats.avaliacoesRealizadas !== 'undefined') ? stats.avaliacoesRealizadas : 0);";
+  var originalNovo2 = "document.getElementById('stat-provas-geradas').innerText = (stats && typeof stats.provasGeradas !== 'undefined') ? stats.provasGeradas : 0;";
+
+  var corrigidoNovo1 = "document.getElementById('stat-provas').innerText = (stats && typeof stats.provasGeradas !== 'undefined') ? stats.provasGeradas : 0;";
+  var corrigidoNovo2 = "document.getElementById('stat-provas-geradas').innerText = (stats && typeof stats.avaliacoes !== 'undefined') ? stats.avaliacoes : ((stats && typeof stats.avaliacoesRealizadas !== 'undefined') ? stats.avaliacoesRealizadas : 0);";
+
+  if (html.indexOf(originalNovo1) !== -1) {
+    html = html.replace(originalNovo1, corrigidoNovo1);
+  }
+  if (html.indexOf(originalNovo2) !== -1) {
+    html = html.replace(originalNovo2, corrigidoNovo2);
+  }
+
+  // Compatibilidade com versões anteriores do Index.
+  html = html.replace(
+    "document.getElementById('stat-provas').innerText = stats.avaliacoes;",
+    "document.getElementById('stat-provas').innerText = stats.provasGeradas;"
+  );
+
+  return html;
 }
 
 /**
