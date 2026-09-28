@@ -1,13 +1,21 @@
 /**
  * WEBAPP AVALIAÇÃO — PONTE PWA ↔ APPS SCRIPT
  * VERSÃO COMPLETA — LOGIN + SESSÃO + FRONTEND REAL + RPC
+ * COMPATÍVEL COM PERFIL / STATUS / PERMISSÕES DE ADMINISTRADORES
  *
  * OBJETIVO
  * - Manter o endereço do usuário em portalsimonsports.github.io;
  * - Preservar login/sessão da versão anterior;
  * - Carregar o HTML REAL do arquivo Index do Apps Script;
  * - Substituir google.script.run por uma ponte RPC via POST oculto;
- * - Reaproveitar as funções públicas já existentes no projeto Apps Script.
+ * - Reaproveitar as funções públicas já existentes no projeto Apps Script;
+ * - Preparar a PWA para a aba Admins com:
+ *   ID | Usuario | Senha | Data_Criacao | Perfil | Status | Permissoes | Observacoes.
+ *
+ * COMPATIBILIDADE
+ * - Quando existir autenticarAdminCompleto(usuario, senha), usa Perfil/Status/Permissoes.
+ * - Enquanto o Admin.gs antigo ainda estiver em uso, mantém fallback para validarSenhaAdmin().
+ * - Assim esta versão pode ser publicada antes da atualização definitiva do Admin.gs.
  *
  * REQUISITOS DA IMPLANTAÇÃO WEB APP
  * - Executar como: Eu
@@ -109,33 +117,47 @@ function PSS_PWA_login_(codigo, senha, perfil) {
   var usuario = null;
   var valido = false;
 
-  /** ADMINISTRADOR */
-  if (perfil === 'ADMIN' || codigo.toLowerCase() === 'admin') {
-    if (typeof validarSenhaAdmin === 'function') {
-      try {
-        valido = !!validarSenhaAdmin(codigo, senha);
-      } catch (eAdmin) {
-        valido = false;
-      }
+  /**
+   * ADMINISTRADOR
+   * Aceita SUPERADMIN / ADMIN / PROFESSOR / CONSULTA.
+   * O tipo exato virá da coluna Perfil quando Admin.gs for atualizado.
+   */
+  if (
+    perfil === 'ADMIN' ||
+    perfil === 'SUPERADMIN' ||
+    perfil === 'PROFESSOR' ||
+    perfil === 'CONSULTA' ||
+    codigo.toLowerCase() === 'admin'
+  ) {
+    var acessoAdmin = PSS_PWA_autenticarAdmin_(codigo, senha);
 
-      if (valido) {
-        usuario = {
-          codigo: codigo,
-          nome: 'Administrador',
-          perfil: 'ADMIN',
-          modulos: [
-            {
-              nome: 'Painel do Administrador',
-              url: '#'
-            }
-          ]
-        };
-      }
+    if (acessoAdmin && acessoAdmin.ok) {
+      valido = true;
+      usuario = {
+        id: String(acessoAdmin.id || ''),
+        codigo: String(acessoAdmin.usuario || codigo),
+        nome: String(acessoAdmin.nome || acessoAdmin.usuario || codigo || 'Administrador'),
+        perfil: String(acessoAdmin.perfil || 'ADMIN').toUpperCase(),
+        status: String(acessoAdmin.status || 'ATIVO').toUpperCase(),
+        permissoes: PSS_PWA_normalizarPermissoes_(acessoAdmin.permissoes),
+        observacoes: String(acessoAdmin.observacoes || ''),
+        modulos: [
+          {
+            nome: 'Painel do Administrador',
+            url: '#'
+          }
+        ]
+      };
+    } else if (acessoAdmin && acessoAdmin.bloqueado) {
+      return {
+        ok: false,
+        erro: acessoAdmin.erro || 'Administrador inativo ou sem permissão de acesso.'
+      };
     }
   }
 
   /** ALUNO / USUÁRIO */
-  if (!valido && perfil !== 'ADMIN') {
+  if (!valido && perfil !== 'ADMIN' && perfil !== 'SUPERADMIN') {
     if (typeof validarAcessoAluno === 'function') {
       try {
         var r = validarAcessoAluno(codigo, senha);
@@ -146,6 +168,8 @@ function PSS_PWA_login_(codigo, senha, perfil) {
             codigo: codigo,
             nome: PSS_PWA_extrairNome_(r, codigo),
             perfil: 'ALUNO',
+            status: 'ATIVO',
+            permissoes: ['AREA_ALUNO'],
             modulos: [
               {
                 nome: 'Área do Aluno',
@@ -180,6 +204,151 @@ function PSS_PWA_login_(codigo, senha, perfil) {
     token: token,
     usuario: usuario
   };
+}
+
+/**
+ * Autenticação administrativa compatível com duas fases:
+ *
+ * FASE NOVA
+ *   autenticarAdminCompleto(usuario, senha)
+ *   Deve retornar objeto como:
+ *   {
+ *     ok: true,
+ *     id: 'ADM...',
+ *     usuario: 'nome',
+ *     perfil: 'SUPERADMIN|ADMIN|PROFESSOR|CONSULTA',
+ *     status: 'ATIVO',
+ *     permissoes: 'TODAS' ou lista,
+ *     observacoes: ''
+ *   }
+ *
+ * FASE ANTIGA
+ *   validarSenhaAdmin(usuario, senha) retorna true/false.
+ */
+function PSS_PWA_autenticarAdmin_(codigo, senha) {
+  try {
+    if (typeof autenticarAdminCompleto === 'function') {
+      var detalhado = autenticarAdminCompleto(codigo, senha);
+
+      if (detalhado && typeof detalhado === 'object') {
+        var status = String(detalhado.status || 'ATIVO').trim().toUpperCase();
+        var ok = detalhado.ok === true || detalhado.sucesso === true || detalhado.valido === true;
+
+        if (ok && status !== 'ATIVO') {
+          return {
+            ok: false,
+            bloqueado: true,
+            erro: 'Administrador inativo. Acesso bloqueado.'
+          };
+        }
+
+        if (ok) {
+          return {
+            ok: true,
+            id: detalhado.id || detalhado.adminId || '',
+            usuario: detalhado.usuario || codigo,
+            nome: detalhado.nome || detalhado.usuario || codigo,
+            perfil: detalhado.perfil || 'ADMIN',
+            status: status || 'ATIVO',
+            permissoes: detalhado.permissoes !== undefined ? detalhado.permissoes : 'TODAS',
+            observacoes: detalhado.observacoes || ''
+          };
+        }
+
+        if (detalhado.bloqueado || status === 'INATIVO') {
+          return {
+            ok: false,
+            bloqueado: true,
+            erro: detalhado.erro || detalhado.mensagem || 'Administrador inativo. Acesso bloqueado.'
+          };
+        }
+
+        return {
+          ok: false,
+          erro: detalhado.erro || detalhado.mensagem || 'Credenciais administrativas inválidas.'
+        };
+      }
+    }
+  } catch (eDetalhado) {
+    // Mantém compatibilidade: se a função nova falhar, tenta o login antigo.
+  }
+
+  try {
+    if (typeof validarSenhaAdmin === 'function') {
+      var antigo = validarSenhaAdmin(codigo, senha);
+
+      if (antigo && typeof antigo === 'object') {
+        var statusAntigo = String(antigo.status || 'ATIVO').trim().toUpperCase();
+        var okAntigo = antigo.ok === true || antigo.sucesso === true || antigo.valido === true;
+
+        if (okAntigo && statusAntigo !== 'ATIVO') {
+          return {
+            ok: false,
+            bloqueado: true,
+            erro: 'Administrador inativo. Acesso bloqueado.'
+          };
+        }
+
+        if (okAntigo) {
+          return {
+            ok: true,
+            id: antigo.id || antigo.adminId || '',
+            usuario: antigo.usuario || codigo,
+            nome: antigo.nome || antigo.usuario || codigo,
+            perfil: antigo.perfil || 'ADMIN',
+            status: statusAntigo || 'ATIVO',
+            permissoes: antigo.permissoes !== undefined ? antigo.permissoes : 'TODAS',
+            observacoes: antigo.observacoes || ''
+          };
+        }
+      }
+
+      if (antigo === true) {
+        return {
+          ok: true,
+          id: '',
+          usuario: codigo,
+          nome: codigo.toLowerCase() === 'admin' ? 'Administrador' : codigo,
+          perfil: codigo.toLowerCase() === 'admin' ? 'SUPERADMIN' : 'ADMIN',
+          status: 'ATIVO',
+          permissoes: 'TODAS',
+          observacoes: 'Compatibilidade temporária com validarSenhaAdmin() antigo.'
+        };
+      }
+    }
+  } catch (eAntigo) {}
+
+  return {
+    ok: false,
+    erro: 'Código/usuário ou senha inválidos.'
+  };
+}
+
+/**
+ * Padroniza Permissoes para um array.
+ * Aceita:
+ * - TODAS
+ * - string separada por vírgula, ; ou |
+ * - array
+ */
+function PSS_PWA_normalizarPermissoes_(permissoes) {
+  if (Array.isArray(permissoes)) {
+    return permissoes
+      .map(function(v) { return String(v || '').trim().toUpperCase(); })
+      .filter(function(v) { return !!v; });
+  }
+
+  var texto = String(permissoes === undefined || permissoes === null ? 'TODAS' : permissoes).trim();
+  if (!texto) texto = 'TODAS';
+
+  if (texto.toUpperCase() === 'TODAS') {
+    return ['TODAS'];
+  }
+
+  return texto
+    .split(/[;,|]+/)
+    .map(function(v) { return String(v || '').trim().toUpperCase(); })
+    .filter(function(v) { return !!v; });
 }
 
 /**
@@ -223,9 +392,19 @@ function PSS_PWA_validarSessao_(token) {
   }
 
   try {
+    var usuario = JSON.parse(raw);
+
+    if (usuario && usuario.status && String(usuario.status).toUpperCase() !== 'ATIVO') {
+      CacheService.getScriptCache().remove('PSS_PWA_SESSAO_' + token);
+      return {
+        ok: false,
+        erro: 'Usuário inativo. Sessão encerrada.'
+      };
+    }
+
     return {
       ok: true,
-      usuario: JSON.parse(raw)
+      usuario: usuario
     };
   } catch (e) {
     return {
@@ -452,7 +631,9 @@ function PSS_PWA_TESTAR_SESSAO() {
   var usuario = {
     codigo: 'TESTE',
     nome: 'Usuário Teste',
-    perfil: 'TESTE'
+    perfil: 'TESTE',
+    status: 'ATIVO',
+    permissoes: ['TODAS']
   };
 
   CacheService.getScriptCache().put(
