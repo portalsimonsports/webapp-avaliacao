@@ -1,4 +1,4 @@
-const CACHE = "webapp-avaliacao-v4";
+const CACHE = "webapp-avaliacao-v6";
 const CORE = ["./","./index.html","./manifest.webmanifest","./icon-192.svg","./icon-512.svg"];
 
 self.addEventListener("install", event => {
@@ -18,7 +18,6 @@ self.addEventListener("fetch", event => {
   const url = new URL(event.request.url);
   if(url.origin !== self.location.origin) return;
 
-  // HTML/JS/config sempre buscam a versão mais nova; demais arquivos podem cair no cache.
   const noStore = /(?:index\.html|app\.js|config\.js|sw\.js)$/.test(url.pathname) || url.pathname.endsWith('/webapp-avaliacao/');
 
   if(noStore){
