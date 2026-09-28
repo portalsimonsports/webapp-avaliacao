@@ -4,9 +4,19 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f3d66">
-  <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="stylesheet" href="./styles.css">
+  <link rel="manifest" href="./manifest.webmanifest?v=3">
   <title>WebApp Avaliação</title>
+  <style>
+    *{box-sizing:border-box}
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#eef3f8;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    #webappFrame{position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;border:0;display:block;background:#fff;z-index:1}
+    .loading{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;background:linear-gradient(180deg,#0f3d66 0 38%,#eef3f8 38%)}
+    .loader-card{width:min(88vw,360px);background:#fff;border-radius:22px;padding:28px 24px;box-shadow:0 18px 50px rgba(0,0,0,.18);display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;color:#14213d}
+    .logo{width:64px;height:64px;border-radius:18px;display:grid;place-items:center;background:#0f3d66;color:#fff;font-weight:800;font-size:1.15rem}
+    .loader-card strong{font-size:1.2rem}
+    .loader-card span{color:#667085;font-size:.95rem}
+    .loading.hidden{display:none}
+  </style>
 </head>
 <body>
   <div id="loading" class="loading">
@@ -19,7 +29,7 @@
 
   <iframe id="webappFrame" title="WebApp Avaliação" allow="camera; microphone; clipboard-read; clipboard-write"></iframe>
 
-  <script src="./config.js"></script>
-  <script src="./app.js"></script>
+  <script src="./config.js?v=3"></script>
+  <script src="./app.js?v=3"></script>
 </body>
 </html>
